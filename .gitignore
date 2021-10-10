@@ -1,0 +1,4 @@
+/marketData/**
+/testData/**
+unitTests.py
+/pycache

@@ -1,0 +1,15 @@
+So, right
+
+- A clients portfolio is assigned a "risk" percentage out of 100, higher = more risky, lower = less risky
+- Each "asset" in the client portfolio is, equally, assigned a rating out of 40
+
+- 2 metrics are used to determine risk
+  - Standard Deviation - A standard volatility measure, no worries, piece of piss to calculate
+    - 15 points, where each 0.67% std dev rises, it rises 1 point
+  - Beta - A much more interesting measure that measures volatility relative to the rest of the market,
+      a bit harder to calculate
+  (at least, a bit more computing needed on mine and Aug's end, so, yeeeaaah) - 25 points, for every 0.01 the beta rises above 1, a point is added
+
+- Charge, what, 500 Lex for the first few calc runs, see how that goes
+
+Update Beta data once a month
