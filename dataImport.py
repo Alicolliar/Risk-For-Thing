@@ -1,5 +1,7 @@
 # This file includes all the neccessary data import functions
 import csv
+from math import sqrt
+
 
 def importPreviousPrices(stockTicker):
     stockFileName = "testData/" + stockTicker + ".csv"

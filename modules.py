@@ -25,7 +25,7 @@ class Stock():
         return self._prices[index]
 
     def getDataForTest(self):
-        return self._mean, self._stdDev, self._stdDevPercent, self._riskScore
+        return self._mean, self._stdDev, self._stdDevPercent, self._riskScore, self._beta
 
     def importPreviousPrices(self):
         """NOTE: This was moved to the class, it's just easier this way, I promise, also, it's 1 am and I can't fcuxking type"""
@@ -99,12 +99,12 @@ class Stock():
         indicates it is related to the index"""
         sPrices, sStdDev, sStdDevP = self.getPrices()
         sTotal = self._total
-        iPrices, iStdDev, iStdDevP, iTotal = index.getMeans()
+        iPrices, iStdDev, iStdDevP, iTotal = index.getPrices()
         sPricePoints = self._totalPricePoints
-        correlation = correlation(sPrices, sTotal, iPrices, iTotal, sPricePoints)
+        stockCorrelation = correlation(sPrices, sTotal, iPrices, iTotal, sPricePoints)
         stdDevDivision = (sStdDevP/100)/(iStdDevP/100)
-        beta = correlation * stdDevDivision # THIS?!?! THIS IS FUCKING IT? THIS IS THE BIG FUCKING FINALE FOR THIS SECTION!!???!?!?!?!
-        return beta #Well, I guess this is the big finale, but that's so much worse
+        beta = stockCorrelation * stdDevDivision # THIS?!?! THIS IS FUCKING IT? THIS IS THE BIG FUCKING FINALE FOR THIS SECTION!!???!?!?!?!
+        self._beta =  beta #Well, I guess this is the big finale, but that's so much worse
 
     def stdDevRiskUpdate(self):
         """This function updates the risk for stocks from std dev"""
@@ -123,6 +123,7 @@ class Index(Stock):
         self.indexDataTrim()
         self.indexCalcs()
         self.standardDeviation()
+        self.exportData()
 
     def importPreviousPrices(self, indexConstits):
         index = []
@@ -149,8 +150,11 @@ class Index(Stock):
             i.selectTimedData(minimumCountForTimed)
         self._totalPricePoints = minimumCount
 
+    def getPrices(self):
+        return self._prices, self._stdDev, self._stdDevPercent, self._total
+
     def getMeans(self):
-        return self._mean, self._stdDev, self._stdDevPercent, self._sum
+        return self._mean, self._stdDev, self._stdDevPercent, self._total
 
     def indexCalcs(self):
         """IMPORTANT!!!: THIS DOES NOT RETURN A SINGLE NUMBER, BUT INSTEAD A LIST as it produces the full gamut of index prices"""
@@ -164,6 +168,18 @@ class Index(Stock):
             workingAvg = workingAvg/indexSize
             averages.append(workingAvg)
         self._prices = averages
+
+    def selectTimedData(self, days=7):
+        ticks = days * 24
+        prices = self._prices
+        pricePoints = self._totalPricePoints-1
+        usablePrices = []
+        for point in range(ticks):
+            curPoint = pricePoints-point
+            price = prices[curPoint-1]
+            usablePrices.append(price)
+        self._prices = usablePrices
+        self._totalPricePoints = ticks
 
     def exportData(self):
         name = self._ticker+".csv"
