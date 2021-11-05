@@ -1,6 +1,7 @@
 # All neccessary mathematical calculation modules, including those specific to risk analysis, are stored in this file
 # Also, the full class structure (booo! down with classism) for the code is stored in here
 import csv
+from dataImport import correlation
 
 class Stock():
     def __init__(self, ticker, folder):
@@ -45,11 +46,13 @@ class Stock():
         """This function updates the stocks risk score, I don't know what more to say"""
         if value < 0:
             value = 0 - value
-            self._riskScore -= value
+            predictValue = self._riskScore - value
         elif value > 0:
-            self._riskScore += value
-        else:
-            return
+            predictValue = self._riskScore + value
+        if predictValue > 40:
+            self._riskScore = 40
+        elif predictValue < 0:
+            self._riskScore = 0
 
     def selectTimedData(self, days=7):
         ticks = days * 24
@@ -70,6 +73,7 @@ class Stock():
         for price in stockPrices:
             total += price
         mean = total/stockPricePoints
+        self._total = total
         self._mean = mean
 
     def standardDeviation(self):
@@ -88,17 +92,23 @@ class Stock():
         self._stdDevPercent = round(((stdDevFinal/self._mean)*100),0)
 
     def betaCalculation(self, index):
-        """In this function, please not that "s" at the start of a
+        """This function caused me more pain than I thought I could physically withstand. I'm proud of myself for this, honestly,
+        even though I probably have fuck all right to be
+        In this function, please not that "s" at the start of a
         variable indicates it is related to the stock, whereas "i"
         indicates it is related to the index"""
         sPrices, sStdDev, sStdDevP = self.getPrices()
-        iPrices, iStdDev, iStdDevP = index.getMeans()
-
-        return
+        sTotal = self._total
+        iPrices, iStdDev, iStdDevP, iTotal = index.getMeans()
+        sPricePoints = self._totalPricePoints
+        correlation = correlation(sPrices, sTotal, iPrices, iTotal, sPricePoints)
+        stdDevDivision = (sStdDevP/100)/(iStdDevP/100)
+        beta = correlation * stdDevDivision # THIS?!?! THIS IS FUCKING IT? THIS IS THE BIG FUCKING FINALE FOR THIS SECTION!!???!?!?!?!
+        return beta #Well, I guess this is the big finale, but that's so much worse
 
     def stdDevRiskUpdate(self):
         """This function updates the risk for stocks from std dev"""
-        mean, stdDev, stdDevPercent = self.getMeans()
+        mean, stdDev, stdDevPercent = self.getPrices()
         prelimRiskSet = round((stdDevPercent/0.67), 0)
         if prelimRiskSet >= 15:
             self.updateRiskScore(15)
@@ -121,6 +131,9 @@ class Index(Stock):
             index.append(newItem)
         self._index = index
 
+    def getTotalPricePoints(self):
+        return self._totalPricePoints
+
     def getDataForTest(self):
         return self._mean, self._stdDev, self._stdDevPercent
 
@@ -137,10 +150,10 @@ class Index(Stock):
         self._totalPricePoints = minimumCount
 
     def getMeans(self):
-        return self._mean, self._stdDev, self._stdDevPercent
+        return self._mean, self._stdDev, self._stdDevPercent, self._sum
 
     def indexCalcs(self):
-        """IMPORTANT!!!: THIS DOES NOT RETURN A SINGLE NUMBER, BUT INSTEAD A LIST as it produces the index prices"""
+        """IMPORTANT!!!: THIS DOES NOT RETURN A SINGLE NUMBER, BUT INSTEAD A LIST as it produces the full gamut of index prices"""
         averages = []
         for i in range((self._totalPricePoints-1),0, -1):
             constits = self._index
