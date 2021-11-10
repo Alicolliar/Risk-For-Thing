@@ -1,7 +1,8 @@
-# All neccessary mathematical calculation modules, including those specific to risk analysis, are stored in this file
+# Most neccessary mathematical calculation modules, including those specific to risk analysis, are stored in this file
 # Also, the full class structure (booo! down with classism) for the code is stored in here
+# Sadly, the correlation calculation is held in the dataImport fileg
 import csv
-from dataImport import correlation
+from math import sqrt
 
 class Stock():
     def __init__(self, ticker, folder):
@@ -12,6 +13,7 @@ class Stock():
         self._ticker = ticker
         self._path = folder + "/" + ticker + ".csv"
         self._riskScore = 0 # NOTE: In my brain, this goes to a max of 40
+        self._beta = None
         self.importPreviousPrices()
         self.standardDeviation()
 
@@ -77,7 +79,7 @@ class Stock():
         self._mean = mean
 
     def standardDeviation(self):
-        """NOTE: Some very bog standard deviousness, nothing weird about it. Also, these can only take a Stock *or Index* type"""
+        """NOTE: Some very bog standard deviousness, nothing weird about it."""
         prices, pricePoints = self.getPricedData()
         self.meanCalculations()
         addingSubtractions = 0
@@ -91,20 +93,46 @@ class Stock():
         self._stdDev = stdDevFinal
         self._stdDevPercent = round(((stdDevFinal/self._mean)*100),0)
 
+    def correlationCalculation(self, stockIndex):
+        """Holy shit, why won't any of this work?"""
+        indexData = stockIndex.getPrices()
+        indexPrices = indexData[0]
+        indexSum = indexData[3]
+        stockPrices = self._prices
+        stockSum = self._total
+        pricePoints = self._totalPricePoints
+        sumStockIndex = 0
+        sumStockSquared = 0
+        sumIndexSquared = 0
+        for i in range(pricePoints):
+            stockPoint = stockPrices[i]
+            indexPoint = indexPrices[i]
+            sum = stockPoint * indexPoint
+            sumStockIndex += sum
+            stockPointSquared = stockPoint**2
+            sumStockSquared += stockPointSquared
+            indexPointSquared = indexPoint**2
+            sumIndexSquared += indexPointSquared
+        stockSumSquared = stockSum**2
+        indexSumSquared = indexSum**2
+        topHalfOfFraction = (pricePoints * (sumStockIndex - (stockSum*indexSum)))
+        insideSqrt = ((pricePoints * sumStockSquared)-stockSumSquared)*((pricePoints * sumIndexSquared)-indexSumSquared)
+        bottomHalfOfFraction = sqrt(insideSqrt)
+        correlation = topHalfOfFraction/bottomHalfOfFraction
+        return correlation
+
     def betaCalculation(self, index):
         """This function caused me more pain than I thought I could physically withstand. I'm proud of myself for this, honestly,
         even though I probably have fuck all right to be
         In this function, please not that "s" at the start of a
         variable indicates it is related to the stock, whereas "i"
         indicates it is related to the index"""
-        sPrices, sStdDev, sStdDevP = self.getPrices()
-        sTotal = self._total
         iPrices, iStdDev, iStdDevP, iTotal = index.getPrices()
         sPricePoints = self._totalPricePoints
-        stockCorrelation = correlation(sPrices, sTotal, iPrices, iTotal, sPricePoints)
+        stockCorrelation = self.correlation(iPrices, iTotal)
         stdDevDivision = (sStdDevP/100)/(iStdDevP/100)
         beta = stockCorrelation * stdDevDivision # THIS?!?! THIS IS FUCKING IT? THIS IS THE BIG FUCKING FINALE FOR THIS SECTION!!???!?!?!?!
-        self._beta =  beta #Well, I guess this is the big finale, but that's so much worse
+        self._beta =  beta # Well, I guess this is the big finale, but that's so much worse
 
     def stdDevRiskUpdate(self):
         """This function updates the risk for stocks from std dev"""
@@ -115,6 +143,15 @@ class Stock():
         else:
             self.updateRiskScore(prelimRiskSet)
 
+    def exportData(self):
+        name = self._ticker+"-trimmed.csv"
+        with open(name, "w") as csvfile:
+            writerJob = csv.writer(csvfile, lineterminator='\n')
+            writerJob.writerow(["tick", "price"])
+            prices = self._prices
+            for i in range(0,(len(prices)-1)):
+                writerJob.writerow([i, prices[i]])
+
 class Index(Stock):
     def __init__(self, ticker, indexConstits):
         self._ticker = ticker
@@ -123,7 +160,6 @@ class Index(Stock):
         self.indexDataTrim()
         self.indexCalcs()
         self.standardDeviation()
-        self.exportData()
 
     def importPreviousPrices(self, indexConstits):
         index = []
