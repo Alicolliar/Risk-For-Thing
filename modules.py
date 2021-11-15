@@ -1,8 +1,9 @@
 # Most neccessary mathematical calculation modules, including those specific to risk analysis, are stored in this file
 # Also, the full class structure (booo! down with classism) for the code is stored in here
-# Sadly, the correlation calculation is held in the dataImport fileg
+
 import csv
 from math import sqrt
+from numpy import corrcoef
 
 class Stock():
     def __init__(self, ticker, folder):
@@ -21,7 +22,7 @@ class Stock():
         return self._prices, self._totalPricePoints
 
     def getPrices(self):
-        return self._prices, self._stdDev, self._stdDevPercent
+        return self._prices, self._mean, self._stdDev, self._stdDevPercent
 
     def getSelectData(self, index):
         return self._prices[index]
@@ -84,7 +85,7 @@ class Stock():
         self.meanCalculations()
         addingSubtractions = 0
         for price in prices:
-            subtractMeanSqrd = (self._mean-price)**2
+            subtractMeanSqrd = (price-self._mean)**2
             addingSubtractions += subtractMeanSqrd
         divisions = addingSubtractions/(pricePoints-1)
         stdDevFinal = divisions ** (1/2)
@@ -97,32 +98,13 @@ class Stock():
         """Holy shit, why won't any of this work?"""
         indexData = stockIndex.getPrices()
         indexPrices = indexData[0]
-        indexSum = indexData[3]
         stockPrices = self._prices
-        stockSum = self._total
-        pricePoints = self._totalPricePoints
-        sumStockIndex = 0
-        sumStockSquared = 0
-        sumIndexSquared = 0
-        for i in range(pricePoints):
-            stockPoint = stockPrices[i]
-            indexPoint = indexPrices[i]
-            sum = stockPoint * indexPoint
-            sumStockIndex += sum
-            stockPointSquared = stockPoint**2
-            sumStockSquared += stockPointSquared
-            indexPointSquared = indexPoint**2
-            sumIndexSquared += indexPointSquared
-        stockSumSquared = stockSum**2
-        indexSumSquared = indexSum**2
-        topHalfOfFraction = (pricePoints * (sumStockIndex - (stockSum*indexSum)))
-        insideSqrt = ((pricePoints * sumStockSquared)-stockSumSquared)*((pricePoints * sumIndexSquared)-indexSumSquared)
-        bottomHalfOfFraction = sqrt(insideSqrt)
-        correlation = topHalfOfFraction/bottomHalfOfFraction
-        return correlation
+        correlation = corrcoef(stockPrices, indexPrices)
+        print(correlation)
+        self._correlation = correlation
 
     def betaCalculation(self, index):
-        """This function caused me more pain than I thought I could physically withstand. I'm proud of myself for this, honestly,
+        """This function caused me more pain than I thought I could physically withstand. I'm proud of myself for this,
         even though I probably have fuck all right to be
         In this function, please not that "s" at the start of a
         variable indicates it is related to the stock, whereas "i"
@@ -136,7 +118,7 @@ class Stock():
 
     def stdDevRiskUpdate(self):
         """This function updates the risk for stocks from std dev"""
-        mean, stdDev, stdDevPercent = self.getPrices()
+        prices, mean, stdDev, stdDevPercent = self.getPrices()
         prelimRiskSet = round((stdDevPercent/0.67), 0)
         if prelimRiskSet >= 15:
             self.updateRiskScore(15)
@@ -187,7 +169,7 @@ class Index(Stock):
         self._totalPricePoints = minimumCount
 
     def getPrices(self):
-        return self._prices, self._stdDev, self._stdDevPercent, self._total
+        return self._prices, self._mean, self._stdDev, self._stdDevPercent, self._total
 
     def getMeans(self):
         return self._mean, self._stdDev, self._stdDevPercent, self._total
