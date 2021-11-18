@@ -3,7 +3,7 @@
 
 import csv
 from math import sqrt
-from numpy import corrcoef
+from numpy import corrcoef, ravel
 
 class Stock():
     def __init__(self, ticker, folder):
@@ -14,7 +14,7 @@ class Stock():
         self._ticker = ticker
         self._path = folder + "/" + ticker + ".csv"
         self._riskScore = 0 # NOTE: In my brain, this goes to a max of 40
-        self._beta = None
+        self._beta = 0
         self.importPreviousPrices()
         self.standardDeviation()
 
@@ -94,24 +94,45 @@ class Stock():
         self._stdDev = stdDevFinal
         self._stdDevPercent = round(((stdDevFinal/self._mean)*100),0)
 
+    def standardDeviationOfReturns(self):
+        prices, pricePoints = self.getPricedData()
+        totalReturns = 0
+        stockReturns = []
+        for i in range(1, len(prices)-1):
+            stockReturn = (prices[i] - prices[i-1])/prices[i-1]
+            stockReturns.append(stockReturn)
+            totalReturns += stockReturn
+            print(self._ticker, i, stockReturn)
+        returnMean = totalReturns / len(stockReturns)
+        returnMinusMeanSum = 0
+        for i in stockReturns:
+            returnMinusMean = (i - returnMean)**2
+            returnMinusMeanSum += returnMinusMean
+        stdDevOfReturns = (returnMinusMeanSum/(len(stockReturns)-1))**(1/2)
+        print("Std Dev Of Ret "+self._ticker, stdDevOfReturns)
+        self._stdDevReturnsPercent = stdDevOfReturns
+
+
     def correlationCalculation(self, stockIndex):
-        """Holy shit, why won't any of this work?"""
+        """Holy shit, why did it take so long to get this work?"""
         indexData = stockIndex.getPrices()
         indexPrices = indexData[0]
         stockPrices = self._prices
         correlation = corrcoef(stockPrices, indexPrices)
-        print(correlation)
-        self._correlation = correlation
+        self._correlation = ravel(correlation[1])[0]
 
     def betaCalculation(self, index):
         """This function caused me more pain than I thought I could physically withstand. I'm proud of myself for this,
-        even though I probably have fuck all right to be
-        In this function, please not that "s" at the start of a
+        even though I probably have fuck all right to be. Turns out all of said pain was needless, due to me being
+        stupid/stubborn.    In this function, please not that "s" at the start of a
         variable indicates it is related to the stock, whereas "i"
         indicates it is related to the index"""
-        iPrices, iStdDev, iStdDevP, iTotal = index.getPrices()
-        sPricePoints = self._totalPricePoints
-        stockCorrelation = self.correlation(iPrices, iTotal)
+        iStdDevP = index.getPrices()[5]
+        self.standardDeviationOfReturns()
+        sStdDevP = self._stdDevReturnsPercent
+        self.correlationCalculation(index)
+        stockCorrelation = self._correlation
+        print(stockCorrelation)
         stdDevDivision = (sStdDevP/100)/(iStdDevP/100)
         beta = stockCorrelation * stdDevDivision # THIS?!?! THIS IS FUCKING IT? THIS IS THE BIG FUCKING FINALE FOR THIS SECTION!!???!?!?!?!
         self._beta =  beta # Well, I guess this is the big finale, but that's so much worse
@@ -126,13 +147,34 @@ class Stock():
             self.updateRiskScore(prelimRiskSet)
 
     def exportData(self):
-        name = self._ticker+"-trimmed.csv"
+        name = "producedData/"+self._ticker+"-trimmed.csv"
         with open(name, "w") as csvfile:
             writerJob = csv.writer(csvfile, lineterminator='\n')
             writerJob.writerow(["tick", "price"])
             prices = self._prices
             for i in range(0,(len(prices)-1)):
                 writerJob.writerow([i, prices[i]])
+
+    def betaRiskUpdate(self):
+        beta = self._beta
+        if beta > 1:
+            riskUpdate = (beta-1)/100
+        else:
+            riskUpdate = 0
+        if riskUpdate > 25:
+            riskUpdate = 25
+        # self._riskScore =
+
+    def exportStockAndMarketData(self, index):
+        stockData = self._prices
+        indexData = index.getPrices()[0]
+        ticker = self._ticker
+        name = "producedData/"+ticker+"-withMarket.csv"
+        with open(name, "w") as csvfile:
+            writerJob = csv.writer(csvfile, lineterminator='\n')
+            writerJob.writerow(["tick", "stock price", "market price"])
+            for i in range(0, len(stockData)-1):
+                writerJob.writerow([i, stockData[i], indexData[i]])
 
 class Index(Stock):
     def __init__(self, ticker, indexConstits):
@@ -169,7 +211,7 @@ class Index(Stock):
         self._totalPricePoints = minimumCount
 
     def getPrices(self):
-        return self._prices, self._mean, self._stdDev, self._stdDevPercent, self._total
+        return self._prices, self._mean, self._stdDev, self._stdDevPercent, self._total, self._stdDevReturnsPercent
 
     def getMeans(self):
         return self._mean, self._stdDev, self._stdDevPercent, self._total
@@ -198,6 +240,7 @@ class Index(Stock):
             usablePrices.append(price)
         self._prices = usablePrices
         self._totalPricePoints = ticks
+        self.standardDeviationOfReturns()
 
     def exportData(self):
         name = self._ticker+".csv"
