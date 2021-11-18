@@ -17,6 +17,7 @@ class Stock():
         self._beta = 0
         self.importPreviousPrices()
         self.standardDeviation()
+        self.standardDeviationOfReturns()
 
     def getPricedData(self):
         return self._prices, self._totalPricePoints
@@ -109,7 +110,6 @@ class Stock():
             returnMinusMean = (i - returnMean)**2
             returnMinusMeanSum += returnMinusMean
         stdDevOfReturns = (returnMinusMeanSum/(len(stockReturns)-1))**(1/2)
-        print("Std Dev Of Ret "+self._ticker, stdDevOfReturns)
         self._stdDevReturnsPercent = stdDevOfReturns
 
 
@@ -128,11 +128,9 @@ class Stock():
         variable indicates it is related to the stock, whereas "i"
         indicates it is related to the index"""
         iStdDevP = index.getPrices()[5]
-        self.standardDeviationOfReturns()
         sStdDevP = self._stdDevReturnsPercent
         self.correlationCalculation(index)
         stockCorrelation = self._correlation
-        print(stockCorrelation)
         stdDevDivision = (sStdDevP/100)/(iStdDevP/100)
         beta = stockCorrelation * stdDevDivision # THIS?!?! THIS IS FUCKING IT? THIS IS THE BIG FUCKING FINALE FOR THIS SECTION!!???!?!?!?!
         self._beta =  beta # Well, I guess this is the big finale, but that's so much worse
@@ -163,7 +161,7 @@ class Stock():
             riskUpdate = 0
         if riskUpdate > 25:
             riskUpdate = 25
-        # self._riskScore =
+        self._riskScore += riskUpdate
 
     def exportStockAndMarketData(self, index):
         stockData = self._prices
