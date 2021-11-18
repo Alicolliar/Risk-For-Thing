@@ -1,4 +1,9 @@
 /marketData/**
 /testData/**
 unitTests.py
-/__pycache__
+/__pycache__/**
+TOP10.csv
+/producedData/**
+crap.py
+/resource
+/src
