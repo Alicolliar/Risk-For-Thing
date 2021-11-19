@@ -248,3 +248,14 @@ class Index(Stock):
             prices = self._prices
             for i in range(0,(len(prices)-1)):
                 writerJob.writerow([i, prices[i]])
+
+class Portfolio():
+    def __init__(self):
+        self._portfolioStocks = []
+        self._totalRiskScore = 0 # NOTE: In my brain this goes to a max of 100
+
+    def addStock(self, stock):
+        self._portfolioStocks.append(stock)
+
+    def riskScoreForBeta(self):
+        
